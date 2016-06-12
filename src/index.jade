@@ -1,0 +1,279 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1')
+    title Minimising Development Dependencies
+
+    link(rel='stylesheet', type='text/css', href='build/build.css')
+
+  body
+
+    article
+
+      section
+        h1 Minimising Development Dependencies
+        h2 (npm as a build tool)
+
+      section
+        h2.bullet What does our FED framework run on?
+        h3.bullet
+          .middleman Middleman
+          .plus +
+          .grunt Grunt
+
+      section
+        h2 Or does it...
+
+        // Up until recently I would have said Middleman + Grunt,
+        // but I think there is a real problem in thinking about it that way,
+        // and I think that way of thinking is holding us back and preventing
+        // us from truly understanding our tools.
+
+      section
+        h2.bullet Many (most?) Grunt plugins are simply wrappers around other tools.
+        h2.bullet Those tools are perfectly functional on their own without Grunt.
+
+      section
+        h2 One example: <i>Grunt Karma</i>
+        p <strong>Karma</strong> is a NodeJS based test runner.
+        p <strong>Grunt Karma</strong> is a Grunt plugin for Karma.
+        pre
+          code.language-bash.
+            # Start Karma from the command line using your config:
+            $ karma start karma.conf.js
+
+        // As this code example shows, you can call Karma on the command line.
+
+        // All the Grunt plugin does is let you configure Karma in a Gruntfile
+        // instead of the normal Karma config file. Any configurations in the
+        // Gruntfile will override configurations in the Karma config file.
+        // This means there are two places you need to look when you want to
+        // check how Karma is configured.
+
+      section
+        h2.bullet The cost of using Grunt plugins instead of calling the underlying tool directly
+        ul
+          li.bullet Two sources for documentation
+          li.bullet When something fails, you have two things to investigate
+          li.bullet Potentially slower to receive updates
+          li.bullet An additional dependency to install
+          li.bullet Grunt plugin might require a specific old version of Grunt
+          li.bullet Too much magic; less visibility into how things work; harder for us to truly understand our tools
+          li.bullet Too much text on this slide
+
+      section
+        h2 When adding a tool to your project
+        p Consider implementing the tool in the simplest possible way, with as few dependencies as possible.
+        p Only add layers like Grunt/Gulp/Webpack if they actually add value.
+
+      section
+        h2 Again, does our FED framework run on Middleman + Grunt?
+
+      section
+        h2.visuallyhidden No. Actually, it runs on:
+        ul.plus-list
+          li Middleman
+          li LibSass
+          li PostCSS (including Autoprefixer)
+          li Clean-CSS (for minification)
+          li Sass-Lint
+          li UglifyJS
+          li ESLint
+          li SVGO, Directory Colorfy & Directory Encoder
+          li Spritesmith
+          li Modernizr builder
+          li Karma & Jasmine
+          li JSDoc
+
+        // So you might have thought our build process was Grunt,
+        // but actually Grunt is just the method we use for calling
+        // all these individual tools, and tying them together into a process.
+
+      section.bg-img(style="background-image:url('images/bull.jpg');")
+        h2 Is the abstraction that Grunt gives us really worth the cost of having an intermediary between us and our tools?
+
+      section
+        h2.bullet Grunt/Gulp/Webpack - not the only way
+        h2.bullet We can configure sequences of tasks with a tool that we all already have:
+          img.npm(src="images/npm.svg", alt="npm")
+
+      section
+        h2 Scripts in package.json
+        pre
+          code.language-javascript.
+            "devDependencies": {
+              "karma": "0.13.22"
+            },
+            "scripts": {
+              "test": "karma start karma.conf.js"
+            }
+        p Now in the command line we can run <code>npm run test</code>. This will execute the script we have defined in <code>test</code>, starting Karma and passing in any arguments we have defined.
+
+        // There is an under-appreciated feature of npm where you can define
+        // scripts in the package.json file
+        // npm scripts are just normal command line scripts, except npm updates
+        // the PATH variable so that you can execute any of the binaries that
+        // have been installed from your package.json file.
+
+      section
+        h2 Normal command line scripts
+        p npm scripts can run anything you can run on your command line, e.g:
+        pre
+          code.language-javascript.
+            "scripts": {
+              "clean": "rm -rf build/*"
+            }
+        p But don’t forget our framework supports Windows.
+        p Some Bash commands like <code>rm</code> (remove) and <code>mv</code> (move/rename) are not available on cmd.exe.
+
+      section
+        h2 Cross platform commands
+        pre
+          code.language-javascript.
+            "devDependencies": {
+              "rimraf": "2.5.2"
+            },
+            "scripts": {
+              "clean": "rimraf build/*"
+            }
+        p Performs the <code>rm -rf</code> task but also works on Windows.
+
+      section
+        h2 Sequential tasks
+        pre
+          code.language-javascript.
+            "scripts": {
+              "precss": "sass-lint style.scss.css",
+              "css": "node-sass style.scss.css style.css"
+            }
+        p If you run <code>npm run css</code>, npm will run the <code>precss</code> task first, and only proceed if this task is successful.
+
+      section
+        h2 More sequential tasks
+        p You can use the <code>&&</code> operator
+        pre
+          code.wrap.language-javascript.
+            "scripts": {
+              "css": "sass-lint style.scss.css && node-sass style.scss.css style.css && postcss --use autoprefixer style.css --replace && cleancss style.css"
+            }
+        p Lint, then run Sass, then add prefixes, then minify.
+        p But having more than one operation on a single line makes your script complex and hard to read 🙁
+
+      section
+        h2 More sequential tasks
+        pre
+          code.language-javascript.
+            "devDependencies": {
+              "npm-run-all": "2.1.1"
+            },
+            "scripts": {
+              "lint": "sass-lint style.scss.css",
+              "sass": "node-sass style.scss.css style.css",
+              "prefix": "postcss --use autoprefixer style.css",
+              "minify": "cleancss style.css",
+              "css": "npm-run-all lint sass prefix minify"
+            }
+        p Much easier to read 🙂
+
+      section
+        h2 More sequential tasks
+        pre
+          code.language-javascript.
+            "devDependencies": {
+              "npm-run-all": "2.1.1"
+            },
+            "scripts": {
+              "css:lint": "sass-lint style.scss.css",
+              "css:sass": "node-sass style.scss.css style.css",
+              "css:prefix": "postcss --use autoprefixer style.css",
+              "css:minify": "cleancss style.css",
+              "css": "npm-run-all css:*"
+            }
+        p Even easier to read 😀
+
+      section
+        h2 Parallel/concurrent tasks
+        pre
+          code.language-javascript.
+            "devDependencies": {
+              "npm-run-all": "2.1.1"
+            },
+            "scripts": {
+              "middleman": "bundle exec middleman",
+              "sass": "node-sass style.scss.css style.css --watch",
+              "serve": "npm-run-all --parallel middleman sass"
+            }
+        p Middleman and LibSass will run at the same time.
+        p Middleman will watch ERB files and LibSass will watch SCSS files.
+        // We don’t need any special plugin to be able to execute Middleman.
+        // You can execute any command line scripts from npm scripts.
+
+      section
+        h2 Streaming / pipelines
+        ul
+          li.bullet Streaming the output from one task into the input of the next task is one of the reasons why GulpJS is so popular.
+          li.bullet Allows sequential tasks to run efficiently because it doesn’t have to save to the file system in between each task.
+          li.bullet But of course GulpJS didn’t invent streaming. We can also do it on the command line with the <strong>|</strong> (pipe) operator, which means we can do it with npm scripts.
+
+      section
+        h2 Streaming
+        pre
+          code.wrap.language-javascript.
+            "scripts": {
+              "css": "node-sass example/style.scss.css | postcss --use autoprefixer | cleancss -o example/style.css"
+            }
+        p Streaming from LibSass to PostCSS (for auto-prefixing)<br/>to Clean-CSS (for minification).
+        p Nice, but again, hard to read 🙁
+
+      section
+        h2 More streaming
+        p *<strong>Waterfall</strong> feature is coming soon to <strong>npm-run-all</strong> 🙂<br/><a href="https://github.com/mysticatea/npm-run-all/issues/22">https://github.com/mysticatea/npm-run-all/issues/22</a>
+        pre
+          code.language-javascript.
+            "devDependencies": {
+              "npm-run-all": "?"
+            },
+            "scripts": {
+              "css:sass": "node-sass style.scss.css",
+              "css:prefix": "postcss --use autoprefixer",
+              "css:minify": "cleancss -o style.css",
+              "css": "npm-run-all --waterfall css:*"
+            }
+
+      section
+        h2 The power of Node
+        p Not all npm modules expose a command line interface<br/>(e.g. <a href="https://github.com/filamentgroup/directory-colorfy">directory-colorfy</a> and <a href="https://github.com/filamentgroup/directory-encoder">directory-encoder</a>).
+        p Sometimes you want more control and flexibility.
+        p Write custom JavaScript and run it with Node from your npm scripts!
+
+      section
+        div <strong>directory-colorfy.js</strong> (plain JavaScript)
+        pre
+          code.language-javascript.
+            var dc = require('directory-colorfy'),
+                input = 'svgs/svgs-temp',
+                output = 'svgs/svgs-temp',
+                options = {};
+                  
+            new dc(input, output, options).convert();
+        div <strong>package.json</strong> (tells NodeJS to run the JavaScript)
+        pre
+          code.language-javascript.
+            "scripts": {
+              "svg:colorfy": "node directory-colorfy.js"
+            }
+
+      section
+        h2.bullet Updates to the FED framework
+        p.bullet We have started using npm scripts for:<br/>Karma, JSDoc, Sass-Lint and ESLint.
+        p.bullet Pull request almost ready for migrating all the<br/>SVG tasks from Grunt to npm scripts.
+        p.bullet Taking it further? Do we need Grunt at all?
+
+      section
+        h2 Further reading
+        p <a href="http://app.pluralsight.com/courses/npm-build-tool-introduction">Introduction to npm as a Build Tool</a><br/>Marcus Hammarberg (Pluralsight course 2015)
+        p <a href="https://www.youtube.com/watch?v=0RYETb9YVrk">Advanced front-end automation with npm scripts</a><br/>Kate Hudson (Presentation at Nordic.js 2015)
+        p <a href="https://medium.freecodecamp.com/why-i-left-gulp-and-grunt-for-npm-scripts-3d6853dd22b8">Why I Left Gulp and Grunt for npm Scripts</a><br/>Cory House (blog post 2016)
+
+    script(src='build/build.js')
